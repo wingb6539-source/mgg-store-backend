@@ -1,121 +1,69 @@
 const express = require("express");
 const cors = require("cors");
+const crypto = require("crypto");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-// Temporary order storage
+const PORT = process.env.PORT || 3000;
+
 const orders = [];
 
+// HOME
 app.get("/", (req, res) => {
   res.json({
-    success: true,
-    message: "MGG STORE Backend is running!"
+    store: "MGG STORE",
+    status: "online",
+    message: "Backend is working"
   });
 });
 
-app.get("/api/health", (req, res) => {
+// GET ORDERS
+app.get("/api/orders", (req, res) => {
   res.json({
     success: true,
-    status: "online"
+    orders: orders
   });
 });
 
-// Create Order
+// CREATE ORDER
 app.post("/api/orders", (req, res) => {
 
   const {
     game,
-    package: diamondPackage,
     playerId,
-    paymentMethod,
-    transactionId
+    package: packageName
   } = req.body;
 
-  if (!game || !diamondPackage || !playerId || !paymentMethod) {
+  if (!game || !playerId || !packageName) {
     return res.status(400).json({
       success: false,
-      message: "Missing required information."
+      message: "Missing order information"
     });
   }
 
   const order = {
-    id: `MGG-${Date.now()}`,
-    game,
-    package: diamondPackage,
-    playerId,
-    paymentMethod,
-    transactionId: transactionId || "",
-    status: "pending",
-    paymentStatus: "pending",
+    orderId:
+      "MGG-" +
+      crypto
+        .randomBytes(4)
+        .toString("hex")
+        .toUpperCase(),
+
+    game: game,
+    playerId: playerId,
+    package: packageName,
+    status: "PENDING_PAYMENT",
     createdAt: new Date().toISOString()
   };
 
   orders.push(order);
 
-  res.status(201).json({
-    success: true,
-    message: "Order created successfully.",
-    order
-  });
-});
-
-// Get Orders
-app.get("/api/orders", (req, res) => {
   res.json({
     success: true,
-    orders
-  });
-});
-
-// Verify Payment
-app.post("/api/orders/:id/verify", (req, res) => {
-
-  const order = orders.find(
-    item => item.id === req.params.id
-  );
-
-  if (!order) {
-    return res.status(404).json({
-      success: false,
-      message: "Order not found."
-    });
-  }
-
-  order.paymentStatus = "verified";
-  order.status = "paid";
-
-  res.json({
-    success: true,
-    message: "Payment verified.",
-    order
-  });
-});
-
-// Reject Payment
-app.post("/api/orders/:id/reject", (req, res) => {
-
-  const order = orders.find(
-    item => item.id === req.params.id
-  );
-
-  if (!order) {
-    return res.status(404).json({
-      success: false,
-      message: "Order not found."
-    });
-  }
-
-  order.paymentStatus = "rejected";
-  order.status = "cancelled";
-
-  res.json({
-    success: true,
-    message: "Payment rejected.",
-    order
+    order: order
   });
 });
 
