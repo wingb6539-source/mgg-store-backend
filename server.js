@@ -22,7 +22,9 @@ const orders = [];
 // =========================
 app.get("/", (req, res) => {
   res.json({
+    success: true,
     store: "MGG STORE",
+    version: "V2026",
     status: "online",
     autoTopup: TOPUP_API_KEY ? "ready" : "API_KEY_NOT_SET"
   });
@@ -52,6 +54,7 @@ app.get("/api/topup/profile", async (req, res) => {
     const data = await response.json();
 
     res.status(response.status).json(data);
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -87,6 +90,7 @@ app.get("/api/topup/games", async (req, res) => {
     const data = await response.json();
 
     res.status(response.status).json(data);
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -121,6 +125,7 @@ app.get("/api/topup/games/:slug/packages", async (req, res) => {
     const data = await response.json();
 
     res.status(response.status).json(data);
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -180,6 +185,7 @@ app.post("/api/topup/verify-player", async (req, res) => {
     const data = await response.json();
 
     res.status(response.status).json(data);
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -257,6 +263,7 @@ app.post("/api/topup/order", async (req, res) => {
       success: response.ok,
       data
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -264,6 +271,7 @@ app.post("/api/topup/order", async (req, res) => {
     });
   }
 });
+
 // =========================
 // CREATE LOCAL ORDER
 // =========================
@@ -316,10 +324,10 @@ app.post("/api/orders", (req, res) => {
     });
   }
 });
+
 // =========================
 // LOCAL ORDERS
 // =========================
- POST /api/orders
 app.get("/api/orders", (req, res) => {
   res.json({
     success: true,
@@ -342,5 +350,7 @@ app.use((req, res) => {
 // START SERVER
 // =========================
 app.listen(PORT, () => {
-  console.log(`MGG STORE Backend running on port ${PORT}`);
+  console.log(
+    `MGG STORE Backend running on port ${PORT}`
+  );
 });
