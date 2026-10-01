@@ -14,12 +14,12 @@ const TOPUP_API_URL =
 
 const TOPUP_API_KEY = process.env.TOPUP_API_KEY;
 
-// Temporary order storage
+// Temporary local order storage
 const orders = [];
 
-// -------------------------
+// =========================
 // HOME
-// -------------------------
+// =========================
 app.get("/", (req, res) => {
   res.json({
     store: "MGG STORE",
@@ -28,13 +28,13 @@ app.get("/", (req, res) => {
   });
 });
 
-// -------------------------
-// CHECK API CONNECTION
-// -------------------------
+// =========================
+// CHECK KAS PLAY PROFILE
+// =========================
 app.get("/api/topup/profile", async (req, res) => {
   try {
     if (!TOPUP_API_KEY) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
         error: "TOPUP_API_KEY is not configured"
       });
@@ -60,28 +60,97 @@ app.get("/api/topup/profile", async (req, res) => {
   }
 });
 
-// -------------------------
+// =========================
+// GET GAMES
+// =========================
+app.get("/api/topup/games", async (req, res) => {
+  try {
+    if (!TOPUP_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: "TOPUP_API_KEY is not configured"
+      });
+    }
+
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 50;
+
+    const response = await fetch(
+      `${TOPUP_API_URL}/games?page=${page}&limit=${limit}`,
+      {
+        headers: {
+          "X-API-Key": TOPUP_API_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =========================
+// GET GAME PACKAGES
+// =========================
+app.get("/api/topup/games/:slug/packages", async (req, res) => {
+  try {
+    if (!TOPUP_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: "TOPUP_API_KEY is not configured"
+      });
+    }
+
+    const { slug } = req.params;
+
+    const response = await fetch(
+      `${TOPUP_API_URL}/games/${encodeURIComponent(slug)}/packages`,
+      {
+        headers: {
+          "X-API-Key": TOPUP_API_KEY
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =========================
 // VERIFY PLAYER
-// -------------------------
+// =========================
 app.post("/api/topup/verify-player", async (req, res) => {
   try {
     if (!TOPUP_API_KEY) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
         error: "TOPUP_API_KEY is not configured"
       });
     }
 
     const {
-      providerCategoryId,
+      slug,
       player_id,
       server_id
     } = req.body;
 
-    if (!providerCategoryId || !player_id) {
+    if (!slug || !player_id) {
       return res.status(400).json({
         success: false,
-        error: "providerCategoryId and player_id are required"
+        error: "slug and player_id are required"
       });
     }
 
@@ -102,7 +171,7 @@ app.post("/api/topup/verify-player", async (req, res) => {
           "X-API-Key": TOPUP_API_KEY
         },
         body: JSON.stringify({
-          providerCategoryId,
+          slug,
           fields
         })
       }
@@ -119,13 +188,13 @@ app.post("/api/topup/verify-player", async (req, res) => {
   }
 });
 
-// -------------------------
-// AUTO TOP UP
-// -------------------------
+// =========================
+// AUTO TOP UP ORDER
+// =========================
 app.post("/api/topup/order", async (req, res) => {
   try {
     if (!TOPUP_API_KEY) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
         error: "TOPUP_API_KEY is not configured"
       });
@@ -133,23 +202,20 @@ app.post("/api/topup/order", async (req, res) => {
 
     const {
       packageId,
-      providerCategoryId,
       player_id,
       server_id,
       customerOrderId
     } = req.body;
 
-    if (!packageId || !providerCategoryId || !player_id) {
+    if (!packageId || !player_id) {
       return res.status(400).json({
         success: false,
-        error: "packageId, providerCategoryId and player_id are required"
+        error: "packageId and player_id are required"
       });
     }
 
-    // Unique key prevents accidental duplicate top-up
     const idempotencyKey =
-      customerOrderId ||
-      crypto.randomUUID();
+      customerOrderId || crypto.randomUUID();
 
     const fields = {
       player_id
@@ -177,9 +243,8 @@ app.post("/api/topup/order", async (req, res) => {
 
     const data = await response.json();
 
-    // Save local order
     orders.push({
-      customerOrderId,
+      customerOrderId: customerOrderId || null,
       providerOrderId: data?.data?.orderId || null,
       packageId,
       player_id,
@@ -200,19 +265,30 @@ app.post("/api/topup/order", async (req, res) => {
   }
 });
 
-// -------------------------
+// =========================
 // LOCAL ORDERS
-// -------------------------
+// =========================
 app.get("/api/orders", (req, res) => {
   res.json({
     success: true,
+    count: orders.length,
     orders
   });
 });
 
-// -------------------------
+// =========================
+// 404
+// =========================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: "Route not found"
+  });
+});
+
+// =========================
 // START SERVER
-// -------------------------
+// =========================
 app.listen(PORT, () => {
   console.log(`MGG STORE Backend running on port ${PORT}`);
 });
