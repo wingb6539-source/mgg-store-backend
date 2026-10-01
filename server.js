@@ -319,6 +319,7 @@ app.post("/api/orders", (req, res) => {
 // =========================
 // LOCAL ORDERS
 // =========================
+ POST /api/orders
 app.get("/api/orders", (req, res) => {
   res.json({
     success: true,
