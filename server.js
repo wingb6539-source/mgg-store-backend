@@ -335,7 +335,59 @@ app.get("/api/orders", (req, res) => {
     orders
   });
 });
+/* =========================
+UPDATE ORDER STATUS
+========================= */
 
+app.patch("/api/orders/:orderId/status", (req, res) => {
+try {
+
+const { orderId } = req.params;
+const { status } = req.body;
+
+const allowedStatuses = [
+  "PAYMENT_PENDING",
+  "PAID",
+  "COMPLETED",
+  "CANCELLED"
+];
+
+if (!allowedStatuses.includes(status)) {
+  return res.status(400).json({
+    success: false,
+    error: "Invalid order status"
+  });
+}
+
+const order = orders.find(
+  item => item.orderId === orderId
+);
+
+if (!order) {
+  return res.status(404).json({
+    success: false,
+    error: "Order not found"
+  });
+}
+
+order.status = status;
+order.updatedAt = new Date().toISOString();
+
+res.json({
+  success: true,
+  message: "Order status updated",
+  order
+});
+
+} catch (error) {
+
+res.status(500).json({
+  success: false,
+  error: error.message
+});
+
+}
+});
 // =========================
 // 404
 // =========================
