@@ -264,7 +264,58 @@ app.post("/api/topup/order", async (req, res) => {
     });
   }
 });
+// =========================
+// CREATE LOCAL ORDER
+// =========================
+app.post("/api/orders", (req, res) => {
+  try {
+    const {
+      game,
+      package: packageName,
+      price,
+      player_id,
+      customerOrderId
+    } = req.body;
 
+    if (!game || !packageName || !player_id) {
+      return res.status(400).json({
+        success: false,
+        error: "game, package and player_id are required"
+      });
+    }
+
+    const orderId =
+      customerOrderId ||
+      "MGG-" +
+      Date.now() +
+      "-" +
+      crypto.randomUUID().slice(0, 8).toUpperCase();
+
+    const order = {
+      orderId,
+      game,
+      package: packageName,
+      price: Number(price) || 0,
+      player_id,
+      status: "PAYMENT_PENDING",
+      createdAt: new Date().toISOString()
+    };
+
+    orders.push(order);
+
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully",
+      order
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 // =========================
 // LOCAL ORDERS
 // =========================
