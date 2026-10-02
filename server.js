@@ -275,20 +275,29 @@ app.post("/api/topup/order", async (req, res) => {
 // =========================
 // CREATE LOCAL ORDER
 // =========================
+
 app.post("/api/orders", (req, res) => {
   try {
+
     const {
       game,
       package: packageName,
       price,
+
+      // Accept both names
+      playerId,
       player_id,
+
       customerOrderId
     } = req.body;
 
-    if (!game || !packageName || !player_id) {
+    const finalPlayerId =
+      playerId || player_id;
+
+    if (!game || !packageName || !finalPlayerId) {
       return res.status(400).json({
         success: false,
-        error: "game, package and player_id are required"
+        error: "game, package and playerId are required"
       });
     }
 
@@ -297,31 +306,57 @@ app.post("/api/orders", (req, res) => {
       "MGG-" +
       Date.now() +
       "-" +
-      crypto.randomUUID().slice(0, 8).toUpperCase();
+      crypto.randomUUID()
+        .slice(0, 8)
+        .toUpperCase();
 
     const order = {
+
       orderId,
+
       game,
+
       package: packageName,
+
       price: Number(price) || 0,
-      player_id,
+
+      playerId: finalPlayerId,
+
+      player_id: finalPlayerId,
+
       status: "PAYMENT_PENDING",
+
       createdAt: new Date().toISOString()
+
     };
 
     orders.push(order);
 
+    console.log("NEW ORDER:", order);
+
     res.status(201).json({
+
       success: true,
+
       message: "Order created successfully",
+
       order
+
     });
 
   } catch (error) {
+
+    console.error("CREATE ORDER ERROR:", error);
+
     res.status(500).json({
+
       success: false,
+
       error: error.message
+
     });
+
+  
   }
 });
 
