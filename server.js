@@ -255,9 +255,11 @@ app.get("/api/topup/order/:orderCode", async (req, res) => {
 // ========================================
 app.post("/api/orders", (req, res) => {
   try {
+
     const {
       game,
       package: packageName,
+      packageId,
       price,
       playerId,
       player_id,
@@ -272,11 +274,16 @@ app.post("/api/orders", (req, res) => {
     const finalServerId =
       serverId || server_id || null;
 
-    if (!game || !packageName || !finalPlayerId) {
+    if (
+      !game ||
+      !packageName ||
+      !finalPlayerId ||
+      !packageId
+    ) {
       return res.status(400).json({
         success: false,
         error:
-          "game, package and playerId are required"
+          "game, package, packageId and playerId are required"
       });
     }
 
@@ -288,38 +295,64 @@ app.post("/api/orders", (req, res) => {
         .toUpperCase()}`;
 
     const order = {
+
       orderId,
+
       game,
+
       package: packageName,
+
+      packageId: Number(packageId),
+
       price: Number(price) || 0,
+
       playerId: finalPlayerId,
+
       serverId: finalServerId,
+
       status: "PAYMENT_PENDING",
-      createdAt: new Date().toISOString()
+
+      createdAt:
+        new Date().toISOString()
+
     };
 
     orders.push(order);
 
-    console.log("NEW LOCAL ORDER:", order);
+    console.log(
+      "NEW LOCAL ORDER:",
+      order
+    );
 
     res.status(201).json({
+
       success: true,
-      message: "Order created successfully",
+
+      message:
+        "Order created successfully",
+
       order
+
     });
 
   } catch (error) {
+
     console.error(
       "CREATE ORDER ERROR:",
       error
     );
 
     res.status(500).json({
+
       success: false,
+
       error: error.message
+
     });
+
   }
 });
+      
 
 // ========================================
 // LOCAL ORDERS
