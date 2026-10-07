@@ -368,9 +368,13 @@ app.get("/api/orders", (req, res) => {
 // ========================================
 // UPDATE LOCAL ORDER STATUS
 // ========================================
+// ========================================
+// UPDATE LOCAL ORDER STATUS + AUTO TOP UP
+// PATCH /api/orders/:orderId/status
+// ========================================
 app.patch(
   "/api/orders/:orderId/status",
-  (req, res) => {
+  async (req, res) => {
     try {
       const { orderId } = req.params;
       const { status } = req.body;
@@ -400,7 +404,127 @@ app.patch(
         });
       }
 
+      // ==================================
+      // CANCEL
+      // ==================================
+      if (status === "CANCELLED") {
+        order.status = "CANCELLED";
+        order.updatedAt = new Date().toISOString();
+
+        return res.json({
+          success: true,
+          message: "Order cancelled",
+          order
+        });
+      }
+
+      // ==================================
+      // PAID → AUTO TOP UP
+      // ==================================
+      if (
+        status === "PAID" &&
+        order.status === "PAYMENT_PENDING"
+      ) {
+
+        if (!TOPUP_API_KEY) {
+          return res.status(500).json({
+            success: false,
+            error: "TOPUP_API_KEY is not configured"
+          });
+        }
+
+        const reference =
+          order.orderId;
+
+        const body = {
+          package_id: order.packageId,
+          player_id: order.playerId,
+          reference
+        };
+
+        if (order.serverId) {
+          body.server_id = order.serverId;
+        }
+
+        console.log(
+          "AUTO TOP UP REQUEST:",
+          body
+        );
+
+        const {
+          response,
+          data
+        } = await topupRequest("/orders", {
+          method: "POST",
+          body: JSON.stringify(body)
+        });
+
+        console.log(
+          "KHMER TOP UP RESPONSE:",
+          data
+        );
+
+        if (!response.ok) {
+          return res.status(502).json({
+            success: false,
+            error: "Khmer Top Up API failed",
+            provider: data,
+            order
+          });
+        }
+
+        order.status = "PAID";
+
+        order.topup = {
+          success: true,
+          providerOrderCode:
+            data?.order_code || null,
+          providerStatus:
+            data?.status || null,
+          reference
+        };
+
+        order.updatedAt =
+          new Date().toISOString();
+
+        return res.json({
+          success: true,
+          message: "Payment confirmed and top up submitted",
+          order,
+          provider: data
+        });
+      }
+
+      // ==================================
+      // COMPLETED
+      // ==================================
+      if (status === "COMPLETED") {
+
+        if (order.status !== "PAID") {
+          return res.status(400).json({
+            success: false,
+            error:
+              "Order must be PAID before COMPLETED"
+          });
+        }
+
+        order.status = "COMPLETED";
+
+        order.updatedAt =
+          new Date().toISOString();
+
+        return res.json({
+          success: true,
+          message: "Order completed",
+          order
+        });
+      }
+
+      // ==================================
+      // PAYMENT_PENDING
+      // ==================================
       order.status = status;
+
       order.updatedAt =
         new Date().toISOString();
 
@@ -411,6 +535,12 @@ app.patch(
       });
 
     } catch (error) {
+
+      console.error(
+        "UPDATE ORDER ERROR:",
+        error
+      );
+
       res.status(500).json({
         success: false,
         error: error.message
